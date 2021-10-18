@@ -2,12 +2,12 @@
 
 import numpy as np
 
-from .anm6_easy_ma import ANM6_MA
-from ..anm_ma_agent import Agent
+from gym_anm.envs.anm6_env.anm6_ma import ANM6_MA
+from gym_anm.envs.anm_ma_agent import Agent
 
 
 class ANM6Easy_MA(ANM6_MA):
-    """The :code:`ANM6Easy-v0` task."""
+    """The :code:`ANM6Easy_MA-v0` task."""
 
     def __init__(self):
         K = 1
@@ -16,10 +16,12 @@ class ANM6Easy_MA(ANM6_MA):
         lamb = 100
         aux_bounds = np.array([[0, 24 / delta_t - 1]])
         costs_clipping = (1, 100)
-        agents = _make_agents()
-        super().__init__(observation, K, delta_t, gamma, lamb, agents, aux_bounds,
-                         costs_clipping)
+        super().__init__(K, delta_t, gamma, lamb, agents=None,
+                         aux_bounds=None, costs_clipping=None, seed=None)
 
+        agents = _make_agents(self.simulator)
+        self.agents = agents
+        self.N_agents = len(agents)
         # Consumption and maximum generation 24-hour time series.
         self.P_loads = _get_load_time_series()
         self.P_maxs = _get_gen_time_series()
@@ -77,6 +79,33 @@ class ANM6Easy_MA(ANM6_MA):
 
         return obs
 
+def _make_agents(simulator):
+    """ Returns list of agents that control different devices"""
+
+    agents_list = []
+    device_keys_list = []
+    # Device 0 (Slack)
+
+    # Device 2 (Wind)
+    dev = [2]
+    device_keys_list.append(dev)
+
+    # Device 4 (Wind)
+    dev = [4]
+    device_keys_list.append(dev)
+
+    # Device 6 (Solar)
+    dev = [6]
+    device_keys_list.append(dev)
+
+    for ii in range(len(device_keys_list)):
+        name_str = 'agent_' + str(ii)
+        dev_keys = device_keys_list[ii]
+        agent_temp = Agent(name=name_str, ind=ii, observation='state', device_keys=dev_keys, simulator=simulator, K=0)
+        agents_list.append(agent_temp)
+        print(f'ii={ii}')
+
+    return agents_list
 
 def _get_load_time_series():
     """Return the fixed 24-hour time-series for the load injections."""

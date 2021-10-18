@@ -8,7 +8,7 @@ from logging import getLogger
 from copy import deepcopy
 import warnings
 from scipy.sparse.linalg import MatrixRankWarning
-from    anm_env import ANMEnv
+from .anm_env import ANMEnv
 
 from ..simulator import Simulator
 from ..errors import ObsSpaceError, ObsNotSupportedError, EnvInitializationError, \
@@ -100,6 +100,7 @@ class MA_ANMEnv(ANMEnv):
         lamb : int or float
             The factor multiplying the penalty associated with violating
             operational constraints (used in the reward signal).
+        agents: list of agents who each can take actions
         aux_bounds : numpy.ndarray, optional
             The bounds on the auxiliary internal variables as a 2D array where
             the :math:`k^{th}`-1 auxiliary variable is bounded by
@@ -113,11 +114,15 @@ class MA_ANMEnv(ANMEnv):
         seed : int, optional
             A random seed.
         """
-        super().__init__(self, network, K, delta_t, gamma, lamb,
-                 aux_bounds, costs_clipping, seed, observation='state') # observation : callable or list or str The observation space. It can be specified as "state" to construct a fully observable environment
+        super().__init__(network, observation='state', K=K, delta_t=delta_t, gamma=gamma, lamb=lamb,
+                 aux_bounds=aux_bounds, costs_clipping=costs_clipping, seed=seed)
 
-        self.agents = agents
-        self.N_agents = len(agents)
+        if agents is None:
+            self.agents = None
+            self.N_agents = None
+        else:
+            self.agents = agents
+            self.N_agents = len(agents)
 
 
     def reset(self):
@@ -237,8 +242,8 @@ class MA_ANMEnv(ANMEnv):
         """
 
         for ii, agent in enumerate(self.agents):
-            err_msg = "Action %r (%s) invalid for agent %s." % (action_n(ii), type(action_n(ii)))
-            assert agent.action_space.contains(action_n(ii)), err_msg
+            err_msg = "Action %r (%s) invalid for agent %s." % (action_n[ii], type(action_n[ii]), agent.name)
+            assert agent.action_space.contains(action_n[ii]), err_msg
 
         obs_n = []
         reward_n = []
@@ -340,13 +345,13 @@ class MA_ANMEnv(ANMEnv):
             agent_des_ids = list(set(des_ids) & set(agent.device_keys))
             N_gen = len(agent_gen_non_slack_ids)
             N_des = len(agent_des_ids)
-            for a, dev_id in zip(action_n[ii,:N_gen], gen_non_slack_ids):
+            for a, dev_id in zip(action_n[ii][:N_gen], agent_gen_non_slack_ids):
                 P_set_points[dev_id] = a
-            for a, dev_id in zip(action_n[ii,N_gen: 2 * N_gen], gen_non_slack_ids):
+            for a, dev_id in zip(action_n[ii][N_gen: 2 * N_gen], agent_gen_non_slack_ids):
                 Q_set_points[dev_id] = a
-            for a, dev_id in zip(action_n[ii,2 * N_gen: 2 * N_gen + N_des], des_ids):
+            for a, dev_id in zip(action_n[ii][2 * N_gen: 2 * N_gen + N_des], agent_des_ids):
                 P_set_points[dev_id] = a
-            for a, dev_id in zip(action_n[ii,2 * N_gen + N_des:], des_ids):
+            for a, dev_id in zip(action_n[ii][2 * N_gen + N_des:], agent_des_ids):
                 Q_set_points[dev_id] = a
 
         return  P_set_points, Q_set_points

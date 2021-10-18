@@ -30,7 +30,7 @@ class MPCAgent(object):
     """
 
     def __init__(self, simulator, action_space, gamma, safety_margin=0.9,
-                 planning_steps=1):
+                 planning_steps=1, agent=None):
         """
         Parameters
         ----------
@@ -129,6 +129,8 @@ class MPCAgent(object):
         # Indicate the optimization problem has not been constructed yet. This is
         # done during the first call of `act()`.
         self.dc_opf = None
+
+        self.agent=agent
 
     def _create_p_bus_expressions(self, P_dev):
         """

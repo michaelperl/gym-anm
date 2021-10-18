@@ -1,21 +1,30 @@
 from ..simulator.components.constants import STATE_VARIABLES
+from ..simulator.components import StorageUnit, Generator, Load
 from gym import spaces
+import numpy as np
+from copy import deepcopy
 
 class Agent(object):
-    def __init__(self, name, ind, observation, device_keys , simulator, reward_callback=None):
+    def __init__(self, name, ind, observation, device_keys, simulator, K, reward_callback=None):
         self.name = name
         self.index = ind
 
+
+        self.action_space = self._build_action_space(device_keys, simulator)
+        self.device_keys = device_keys
+        self.reward_callback = reward_callback
+        self.simulator = simulator
+        self.K = K
+        self.state_values = [('dev_p', 'all', 'MW'), ('dev_q', 'all', 'MVAr'),
+                             ('des_soc', 'all', 'MWh'),
+                             ('gen_p_max', 'all', 'MW'),
+                             ('aux', 'all', None)]
+        self.state_values = self._expand_all_ids(self.state_values)
         # Build observation space.
-        self.obs_values = self._build_observation_space(observation)
+        self.obs_values = self._build_observation_space(observation, self.state_values)
         self.observation_space = self.observation_bounds()
         if self.observation_space is not None:
             self.observation_N = self.observation_space.shape[0]
-        self.action_space = self._build_action_space(device_keys , simulator)
-        self.device_keys = device_keys
-        self.reward_callback = reward_callback
-
-
 
     def _build_observation_space(self, observation, state_values):
         """Handles the different ways of specifying an observation space."""
